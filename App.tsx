@@ -664,11 +664,11 @@ const App: React.FC = () => {
             <AnimatePresence>
               {isAiDrawerOpen && (
                 <motion.aside
-                  initial={{ x: '100%', opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  exit={{ x: '100%', opacity: 0 }}
-                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                  className={`absolute right-4 lg:right-8 top-4 lg:top-8 bottom-4 lg:bottom-8 w-[calc(100%-2rem)] sm:w-95 bg-[#FFF6EE]/95 backdrop-blur-2xl rounded-4xl border border-[#E7DDD2] flex flex-col z-50 shadow-[0_20px_60px_rgba(63,42,29,0.12)] overflow-hidden`}
+                  initial={{ width: 0, opacity: 0, x: 20 }}
+                  animate={{ width: isMobileLayout ? 'calc(100% - 1rem)' : 380, opacity: 1, x: 0 }}
+                  exit={{ width: 0, opacity: 0, x: 20 }}
+                  transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                  className={`absolute lg:relative right-2 top-0 bottom-2 lg:right-0 lg:bottom-0 max-h-full bg-[#FBF6F0] backdrop-blur-xl rounded-[28px] flex flex-col z-40 lg:z-10 shrink-0 border border-[#E7DDD2] shadow-[0_8px_30px_rgb(63,42,29,0.06)] overflow-hidden`}
                 >
                   {/* Header */}
                   <div className="h-16 lg:h-18 border-b border-[#E7DDD2] flex items-center justify-between px-5 font-sans bg-[#FBF6F0]/80">
