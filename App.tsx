@@ -222,6 +222,16 @@ const App: React.FC = () => {
 
   const statusConfig = getStatusConfig();
 
+  const openAiChat = (mode: 'sidebar' | 'modal') => {
+    if (isHistoryOpen) toggleHistory();
+    setIsSettingsOpen(false);
+    setIsExportOpen(false);
+    setIsGuideOpen(false);
+    if (isMobileLayout) setIsSidebarOpen(false);
+    if (mode === 'modal') setAiModalOpen(true);
+    else if (!isAiDrawerOpen) toggleAiDrawer();
+  };
+
   const handleCanvasReady = (ref: any) => {
     canvasRef.current = ref.current;
     setReady(true);
@@ -336,23 +346,18 @@ const App: React.FC = () => {
             </div>
 
             <div className="flex items-center justify-end gap-2 shrink-0 z-10">
-              <motion.button
-                whileHover={{ scale: 1.04 }}
-                whileTap={{ scale: 0.96 }}
-                onClick={() => { setAiModalOpen(false); toggleAiDrawer(); }}
-                className={`flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-full border cursor-pointer ${
-                  isAiDrawerOpen
-                    ? 'bg-[#6B4423] text-[#FBF6F0] border-[#6B4423]'
-                    : 'text-[#6B4423] bg-[#FBF6F0] hover:bg-white border-[#E7DDD2]'
-                }`}
-              >
-                <Sparkles size={16} /> <span className="hidden sm:inline">Assistant</span>
-              </motion.button>
-
-              <button type="button" aria-label="Open AI chat popup" title="Open AI chat popup"
-                onClick={() => { if (isAiDrawerOpen) toggleAiDrawer(); setAiModalOpen(true); }} className="rounded-full border border-[#E7DDD2] bg-[#FBF6F0] p-2.5 text-[#6B4423]">
-                <Maximize2 size={18} />
-              </button>
+              <div className="flex items-center gap-1 rounded-full border border-[#E7DDD2] bg-[#FBF6F0] p-0.5">
+                <button type="button" aria-label="AI Assistant sidebar" aria-expanded={isAiDrawerOpen}
+                  onClick={toggleAiDrawer}
+                  className={`flex items-center gap-2 rounded-full px-3.5 py-2 text-sm font-bold transition-colors ${isAiDrawerOpen ? 'bg-[#6B4423] text-[#FBF6F0]' : 'text-[#6B4423] hover:bg-white'}`}>
+                  <Sparkles size={16} /><span className="hidden sm:inline">Assistant</span>
+                </button>
+                <button type="button" aria-label="Open AI chat popup" title="Open AI chat popup" aria-haspopup="dialog"
+                  onClick={() => setAiModalOpen(true)}
+                  className={`rounded-full p-2.5 transition-colors ${isAiModalOpen ? 'bg-[#6B4423] text-[#FBF6F0]' : 'text-[#6B4423] hover:bg-white'}`}>
+                  <Maximize2 size={16} />
+                </button>
+              </div>
               <SaveMenu onExportClick={() => setIsExportOpen(true)} />
 
               {!isViewer && (
@@ -464,13 +469,19 @@ const App: React.FC = () => {
                       <SidebarItem
                         icon={Square}
                         label="Whiteboard"
-                        active={!isHistoryOpen && !isSettingsOpen && !isExportOpen}
+                        active={!isHistoryOpen && !isSettingsOpen && !isExportOpen && !isAiDrawerOpen && !isAiModalOpen}
                         onClick={() => {
                           if (isHistoryOpen) toggleHistory();
                           setIsSettingsOpen(false);
                           setIsExportOpen(false);
+                          setAiModalOpen(false);
+                          if (isAiDrawerOpen) toggleAiDrawer();
                         }}
                       />
+                      <SidebarItem icon={Sparkles} label="AI Assistant" active={isAiDrawerOpen}
+                        onClick={() => openAiChat('sidebar')} />
+                      <SidebarItem icon={Maximize2} label="AI Chat (Popup)" active={isAiModalOpen}
+                        onClick={() => openAiChat('modal')} />
 
                       {/* 2. History */}
                       <SidebarItem
