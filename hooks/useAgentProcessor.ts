@@ -3,6 +3,7 @@ import React, { useEffect, useRef } from 'react';
 import { useStore } from '../store';
 import { Point } from '../types';
 import { sounds } from '../utils/sounds';
+import { focusCanvasBounds } from '../utils/canvasNavigation';
 
 // CONFIG: High-Speed Agent Action Emulation
 const MIN_REACTION_TIME = 30; 
@@ -88,6 +89,14 @@ export const useAgentProcessor = (canvasRef: React.MutableRefObject<any>) => {
   const wait = (ms: number) => new Promise(res => setTimeout(res, ms));
 
   const execute = async (x: number, y: number, label: string, taskFn: () => void | Promise<void>) => {
+    const canvas = canvasRef.current;
+    const focus = (bounds: { left: number; top: number; width: number; height: number }) => {
+      if (!canvas || canvas.__isPanning) return;
+      const transform = focusCanvasBounds(canvas, bounds);
+      if (transform) useStore.getState().setViewport(transform[0], transform);
+    };
+    const followsContent = !['Panning...', 'Observing...', 'Deleting...'].includes(label);
+    const previousObjects = new Set(canvas?.getObjects() || []);
     setCurrentAction(label);
     setSpatialTarget({ x, y });
     setAccuracy(Math.floor(Math.random() * 5) + 95);
@@ -106,6 +115,22 @@ export const useAgentProcessor = (canvasRef: React.MutableRefObject<any>) => {
 
     // 4. Act
     await taskFn();
+    if (followsContent && canvas) {
+      const added = canvas.getObjects().filter((obj: any) => !previousObjects.has(obj));
+      const bounds = added.map((obj: any) => obj.getBoundingRect(true, true));
+      if (bounds.length) {
+        const left = Math.min(...bounds.map((b: any) => b.left));
+        const top = Math.min(...bounds.map((b: any) => b.top));
+        focus({ left, top,
+          width: Math.max(...bounds.map((b: any) => b.left + b.width)) - left,
+          height: Math.max(...bounds.map((b: any) => b.top + b.height)) - top });
+      } else {
+        const target = canvas.getObjects().find((obj: any) => obj.left === x && obj.top === y);
+        const widget = Object.values(useStore.getState().domElements).find(el => el.x === x && el.y === y);
+        if (target) focus(target.getBoundingRect(true, true));
+        else if (widget) focus({ left: x - widget.width / 2, top: y - widget.height / 2, width: widget.width, height: widget.height });
+      }
+    }
 
     // 5. Short verify pause
     await wait(VERIFICATION_PAUSE);
@@ -596,28 +621,31 @@ export const useAgentProcessor = (canvasRef: React.MutableRefObject<any>) => {
 
         case 'CREATE_SVG': {
           const { svgXml, x, y } = action.payload;
-          await execute(x, y, 'Drawing Vector...', () => {
+          await execute(x, y, 'Drawing Vector...', () => new Promise<void>((resolve) => {
             window.fabric.loadSVGFromString(svgXml, (objs: any[], opts: any) => {
-              if(!objs?.length) return;
+              if(!objs?.length) return resolve();
               const grp = window.fabric.util.groupSVGElements(objs, opts);
               grp.set({ left: x, top: y, originX: 'center', originY: 'center', id: `svg_${Date.now()}` });
               canvas.add(grp);
               canvas.requestRenderAll();
+              resolve();
             });
-          });
+          }));
           break;
         }
 
         case 'CREATE_IMAGE': {
           const { base64, x, y, width } = action.payload;
-          await execute(x, y, 'Placing Asset...', () => {
-            window.fabric.Image.fromURL(base64, (img: any) => {
+          await execute(x, y, 'Placing Asset...', () => new Promise<void>((resolve) => {
+            window.fabric.Image.fromURL(base64, (img: any, isError?: boolean) => {
+              if (isError || !img) return resolve();
               if (width) img.scaleToWidth(width);
               img.set({ left: x, top: y, originX: 'center', originY: 'center', id: `img_${Date.now()}` });
               canvas.add(img);
               canvas.requestRenderAll();
+              resolve();
             });
-          });
+          }));
           break;
         }
 

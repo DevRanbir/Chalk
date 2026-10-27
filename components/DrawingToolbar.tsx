@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  MousePointer2, Pencil, Eraser, Type, Square, MoveRight,
+  MousePointer2, Hand, Pencil, Eraser, Type, Square, MoveRight,
   PaintBucket, ImageIcon, MoreHorizontal, Undo2, Redo2, Trash2,
   ChevronRight, Star, Diamond, Heart, MessageSquare,
   Minus, Circle, Triangle, Pentagon, Hexagon,
@@ -89,6 +89,8 @@ const Btn: React.FC<{
     whileHover={{ scale: 1.08 }}
     whileTap={{ scale: 0.90 }}
     title={title}
+    aria-label={title}
+    aria-pressed={active}
     onClick={onClick}
     className={`relative w-10 h-10 flex items-center justify-center rounded-full transition-all cursor-pointer select-none ${
       active
@@ -140,13 +142,18 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
   // Keyboard shortcut listener to close flyout and switch tools smoothly
   React.useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName || '')) return;
+      if (e.ctrlKey || e.metaKey || e.altKey || (document.activeElement as HTMLElement)?.isContentEditable
+        || ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName || '')
+        || document.querySelector('textarea[data-fabric-hiddentextarea]')) return;
       if (e.key === 'Escape') {
         close();
         setActiveTool('SELECT');
       } else if (e.key === 'v' || e.key === 'V') {
         close();
         setActiveTool('SELECT');
+      } else if (e.key === 'h' || e.key === 'H') {
+        close();
+        setActiveTool('HAND');
       } else if (e.key === 'p' || e.key === 'P') {
         close();
         setActiveTool('PENCIL');
@@ -181,6 +188,7 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
         >
           {/* 1. SELECT */}
           <Btn icon={MousePointer2} active={activeTool === 'SELECT'} title="Select (V)" onClick={() => { setActiveTool('SELECT'); close(); }} />
+          <Btn icon={Hand} active={activeTool === 'HAND'} title="Hand — drag to pan (H)" onClick={() => { setActiveTool('HAND'); close(); }} />
 
           <div className="w-5 h-px bg-[#E7DDD2]" />
 

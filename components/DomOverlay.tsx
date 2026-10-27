@@ -42,6 +42,7 @@ export const DomOverlay: React.FC = () => {
   const domElements = useStore(state => state.domElements);
   const viewportTransform = useStore(state => state.viewportTransform);
   const isActing = useStore(state => state.isActing);
+  const isHandMode = useStore(state => state.activeTool === 'HAND');
   const removeDomElement = useStore(state => state.removeDomElement);
 
   const [fullscreenWidgetId, setFullscreenWidgetId] = useState<string | null>(null);
@@ -376,6 +377,7 @@ export const DomOverlay: React.FC = () => {
           return (
             <div
               key={el.id}
+              inert={isHandMode}
               className={`absolute flex flex-col overflow-hidden rounded-[2rem] bg-[#FFF6EE] border-2 will-change-transform select-none ${
                 isActing ? 'opacity-50' : 'opacity-100'
               } ${
@@ -391,7 +393,7 @@ export const DomOverlay: React.FC = () => {
                 transform: `translate3d(-50%, -50%, 0) rotate(${el.rotation || 0}deg)`,
                 transformOrigin: 'center center',
                 backfaceVisibility: 'hidden',
-                pointerEvents: 'auto',
+                pointerEvents: isHandMode ? 'none' : 'auto',
                 transition: isDragging || isResizing ? 'none' : 'box-shadow 0.22s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.22s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease'
               }}
             >
@@ -443,7 +445,8 @@ export const DomOverlay: React.FC = () => {
               <div
                 id={`widget-${el.id}`}
                 data-board-scroll
-                className="flex-1 bg-[#FFF6EE] relative overflow-hidden pointer-events-auto"
+                className="flex-1 bg-[#FFF6EE] relative overflow-hidden"
+                style={{ pointerEvents: isHandMode ? 'none' : 'auto' }}
               >
                 {renderContent(el)}
 

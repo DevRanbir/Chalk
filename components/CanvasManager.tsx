@@ -214,8 +214,23 @@ export const CanvasManager: React.FC<CanvasManagerProps> = ({ onCanvasReady }) =
     
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName || '')) return;
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName || '')
+        || (document.activeElement as HTMLElement)?.isContentEditable || canvas.getActiveObject()?.isEditing) return;
       if (isViewerUrl) return;
+
+      if (useStore.getState().activeTool === 'HAND' && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+        e.preventDefault();
+        const vpt = [...canvas.viewportTransform];
+        const step = e.shiftKey ? 160 : 60;
+        if (e.key === 'ArrowLeft') vpt[4] += step;
+        if (e.key === 'ArrowRight') vpt[4] -= step;
+        if (e.key === 'ArrowUp') vpt[5] += step;
+        if (e.key === 'ArrowDown') vpt[5] -= step;
+        canvas.setViewportTransform(vpt);
+        canvas.requestRenderAll();
+        setViewport(canvas.getZoom(), vpt);
+        return;
+      }
 
       // Quick Save (Ctrl+S / Cmd+S)
       if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
@@ -227,6 +242,7 @@ export const CanvasManager: React.FC<CanvasManagerProps> = ({ onCanvasReady }) =
       }
 
       if (e.code === 'Space') {
+        e.preventDefault();
         isSpaceDown = true;
         canvas.defaultCursor = 'grab';
         canvas.selection = false;
@@ -269,7 +285,7 @@ export const CanvasManager: React.FC<CanvasManagerProps> = ({ onCanvasReady }) =
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.code === 'Space') {
         isSpaceDown = false;
-        canvas.defaultCursor = 'default';
+        canvas.defaultCursor = useStore.getState().activeTool === 'HAND' ? 'grab' : 'default';
         if (useStore.getState().activeTool === 'SELECT') canvas.selection = true;
         canvas.requestRenderAll();
       }
@@ -286,12 +302,13 @@ export const CanvasManager: React.FC<CanvasManagerProps> = ({ onCanvasReady }) =
       const isMiddleClick = evt.button === 1;
       
       // Pan triggers: Space+Drag, Right-click, Middle-click, or Touch-on-empty
-      if (isSpaceDown || isRightClick || isMiddleClick || (isTouch && !opt.target)) {
+      if (useStore.getState().activeTool === 'HAND' || isSpaceDown || isRightClick || isMiddleClick || (isTouch && !opt.target)) {
         isPanning = true;
+        canvas.__isPanning = true;
         canvas.selection = false;
         canvas.defaultCursor = 'grabbing';
-        lastPosX = evt.clientX || (evt.touches && evt.touches[0].clientX);
-        lastPosY = evt.clientY || (evt.touches && evt.touches[0].clientY);
+        lastPosX = evt.clientX ?? evt.touches?.[0]?.clientX;
+        lastPosY = evt.clientY ?? evt.touches?.[0]?.clientY;
         canvas.requestRenderAll();
         return;
       }
@@ -300,8 +317,8 @@ export const CanvasManager: React.FC<CanvasManagerProps> = ({ onCanvasReady }) =
     canvas.on('mouse:move', function(opt: any) {
       if (isPanning) {
         const e = opt.e;
-        const currentX = e.clientX || (e.touches && e.touches[0].clientX);
-        const currentY = e.clientY || (e.touches && e.touches[0].clientY);
+        const currentX = e.clientX ?? e.touches?.[0]?.clientX;
+        const currentY = e.clientY ?? e.touches?.[0]?.clientY;
         if (currentX === undefined || currentY === undefined) return;
         const vpt = canvas.viewportTransform;
         vpt[4] += currentX - lastPosX;
@@ -317,13 +334,25 @@ export const CanvasManager: React.FC<CanvasManagerProps> = ({ onCanvasReady }) =
       if (isPanning) {
         canvas.setViewportTransform(canvas.viewportTransform);
         isPanning = false;
-        canvas.defaultCursor = isSpaceDown ? 'grab' : 'default';
+        canvas.__isPanning = false;
+        canvas.defaultCursor = isSpaceDown || useStore.getState().activeTool === 'HAND' ? 'grab' : 'default';
         if (!isSpaceDown && useStore.getState().activeTool === 'SELECT') canvas.selection = true;
         canvas.requestRenderAll();
       }
     });
 
     canvas.on('mouse:wheel', function(opt: any) {
+      if (useStore.getState().activeTool === 'HAND' && !isViewerUrl && !opt.e.ctrlKey && !opt.e.metaKey) {
+        const vpt = [...canvas.viewportTransform];
+        vpt[4] -= opt.e.deltaX;
+        vpt[5] -= opt.e.deltaY;
+        canvas.setViewportTransform(vpt);
+        canvas.requestRenderAll();
+        setViewport(canvas.getZoom(), vpt);
+        opt.e.preventDefault();
+        opt.e.stopPropagation();
+        return;
+      }
       const page = boardPageFromPoint(opt.e.clientX, opt.e.clientY);
       if (page) {
         scrollBoardPage(page, opt.e.deltaY, opt.e.deltaX);
@@ -747,6 +776,8 @@ export const CanvasManager: React.FC<CanvasManagerProps> = ({ onCanvasReady }) =
     canvas.freeDrawingBrush.color = brushColor;
     canvas.freeDrawingBrush.width = brushWidth;
     canvas.freeDrawingBrush.decimate = 2.0; // ⚡ Real-time point simplification (Douglas-Peucker approximation)
+    canvas.skipTargetFind = activeTool === 'HAND';
+    canvas.allowTouchScrolling = activeTool !== 'HAND';
 
     if (isViewerUrl) {
       canvas.isDrawingMode = false;
@@ -757,7 +788,15 @@ export const CanvasManager: React.FC<CanvasManagerProps> = ({ onCanvasReady }) =
       return;
     }
 
-    if (activeTool === 'ERASER') {
+    if (activeTool === 'HAND') {
+      canvas.isDrawingMode = false;
+      canvas.selection = false;
+      canvas.defaultCursor = 'grab';
+      canvas.hoverCursor = 'grab';
+      canvas.discardActiveObject();
+      canvas.getObjects().forEach((o: any) => { o.selectable = false; o.evented = false; });
+      canvas.requestRenderAll();
+    } else if (activeTool === 'ERASER') {
       canvas.isDrawingMode = true;
       canvas.selection = false;
       canvas.defaultCursor = 'cell';
@@ -780,6 +819,7 @@ export const CanvasManager: React.FC<CanvasManagerProps> = ({ onCanvasReady }) =
       canvas.isDrawingMode = false;
       canvas.selection = (activeTool === 'SELECT');
       canvas.defaultCursor = 'default';
+      canvas.hoverCursor = 'move';
       canvas.getObjects().forEach(o => { o.selectable = true; o.evented = true; });
     }
 
