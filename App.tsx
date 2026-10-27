@@ -41,7 +41,6 @@ import { QuestPanel } from './components/QuestPanel';
 const App: React.FC = () => {
   const { t } = useTranslation();
   const canvasRef = useRef<any>(null);
-  const [isAiModalOpen, setAiModalOpen] = useState(false);
   const [, setReady] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isQuestOpen, setIsQuestOpen] = useState(false);
@@ -61,7 +60,7 @@ const App: React.FC = () => {
   const { loadSessions } = useStore();
 
   const {
-    logs, inputMode, setInputMode, messages, isAiDrawerOpen, toggleAiDrawer,
+    logs, inputMode, setInputMode, messages, isAiDrawerOpen, toggleAiDrawer, isAiModalOpen, setAiModalOpen,
     chatInputText, setChatInputText, lastUploadedImage, setLastUploadedImage,
     attachedDocument, setAttachedDocument,
     userName, setUserName,
@@ -422,7 +421,7 @@ const App: React.FC = () => {
             <ExportDialog isOpen={isExportOpen} onClose={() => setIsExportOpen(false)} canvasRef={canvasRef} />
             <AiChatModal isOpen={isAiModalOpen} onClose={() => setAiModalOpen(false)}>
               <AiChatPanel mode="modal" canvasRef={canvasRef} onClose={() => setAiModalOpen(false)}
-                onToggleMode={() => { setAiModalOpen(false); if (!isAiDrawerOpen) toggleAiDrawer(); }}
+                onToggleMode={() => { setAiModalOpen(false); if (!isAiDrawerOpen && !isAiModalOpen) toggleAiDrawer(); }}
                 onOpenSettings={() => { setAiModalOpen(false); setIsSettingsOpen(true); }} statusConfig={statusConfig} />
             </AiChatModal>
             <QuickGuideModal 
@@ -430,7 +429,7 @@ const App: React.FC = () => {
               onClose={() => setIsGuideOpen(false)} 
               onSamplePromptClick={(prompt) => {
                 setChatInputText(prompt);
-                if (!isAiDrawerOpen) toggleAiDrawer();
+                if (!isAiDrawerOpen && !isAiModalOpen) toggleAiDrawer();
               }}
             />
             <ToolOverlay />

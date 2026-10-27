@@ -246,7 +246,7 @@ export const CanvasManager: React.FC<CanvasManagerProps> = ({ onCanvasReady }) =
         e.preventDefault();
         if (e.repeat) return;
         const state = useStore.getState();
-        if (!state.isAiDrawerOpen) state.toggleAiDrawer();
+        if (!state.isAiDrawerOpen && !state.isAiModalOpen) state.toggleAiDrawer();
         window.dispatchEvent(new Event('toggle-mic'));
         return;
       }
