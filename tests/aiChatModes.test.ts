@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { useStore } from '../store';
+import { matchAndExecuteHandsFreeCommand } from '../hooks/useAmbientListener';
 
 beforeEach(() => useStore.setState({ isAiDrawerOpen: false, isAiModalOpen: false }));
 describe('AI chat mode state', () => {
@@ -14,6 +15,13 @@ describe('AI chat mode state', () => {
     useStore.getState().toggleAiModal();
     expect(useStore.getState().isAiDrawerOpen).toBe(false);
     expect(useStore.getState().isAiModalOpen).toBe(true);
+  });
+  it('keeps an open popup active for hands-free AI requests', () => {
+    useStore.getState().setAiModalOpen(true);
+    const result = matchAndExecuteHandsFreeCommand('Chalk, buat peta konsep tentang sistem tata surya');
+    expect(result.action).toBe('AI_ASSISTANT');
+    expect(useStore.getState().isAiModalOpen).toBe(true);
+    expect(useStore.getState().isAiDrawerOpen).toBe(false);
   });
   it('preserves the draft, messages, attachment and voice state across switching and closing', () => {
     const messages = [{ role: 'user' as const, text: 'Explain this diagram' }];

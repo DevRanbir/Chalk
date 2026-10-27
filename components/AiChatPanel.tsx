@@ -16,7 +16,7 @@ export interface AiChatPanelProps {
   onClose: () => void;
   onToggleMode?: () => void;
   onOpenSettings: () => void;
-  statusConfig: { dot: string; text: string; mode: string };
+  statusConfig: { dot: string; text: string; mode: string; detail?: string };
 }
 
 export const AiChatPanel: React.FC<AiChatPanelProps> = ({ mode, canvasRef, onClose, onToggleMode, onOpenSettings, statusConfig }) => {
@@ -25,7 +25,25 @@ export const AiChatPanel: React.FC<AiChatPanelProps> = ({ mode, canvasRef, onClo
     attachedDocument, lastUploadedImage, isVoiceListening, interimInputText } = useStore();
   const { processUserPrompt } = useGeminiBrain();
   const chatEndRef = useRef<HTMLDivElement>(null);
-  useEffect(() => { chatEndRef.current?.scrollIntoView?.({ block: 'end' }); }, [messages, isThinking]);
+  const followMessages = useRef(true);
+  useEffect(() => {
+    const end = chatEndRef.current;
+    const body = end?.parentElement;
+    if (!body) return;
+    const follow = () => { if (followMessages.current) body.scrollTop = body.scrollHeight; };
+    const onScroll = () => { followMessages.current = body.scrollHeight - body.scrollTop - body.clientHeight < 80; };
+    const observer = new MutationObserver(follow);
+    observer.observe(body, { subtree: true, childList: true, characterData: true });
+    body.addEventListener('scroll', onScroll, { passive: true });
+    follow();
+    return () => { observer.disconnect(); body.removeEventListener('scroll', onScroll); };
+  }, []);
+  const starters = [
+    ['Mind map', 'Create a mind map about the topic on this whiteboard.'],
+    ['Math diagram', 'Explain the math on this whiteboard with a diagram.'],
+    ['Lesson summary', 'Summarize the lesson on this whiteboard.'],
+    ['Quiz', 'Create a five-question quiz about this lesson.'],
+  ];
   return <div data-chat-mode={mode} className="flex h-full min-h-0 w-full flex-col">
                   {/* Header */}
                   <div className="h-16 lg:h-18 border-b border-[#E7DDD2] flex items-center justify-between px-5 font-sans bg-[#FBF6F0]/80">
@@ -46,8 +64,8 @@ export const AiChatPanel: React.FC<AiChatPanelProps> = ({ mode, canvasRef, onClo
                             <span className="font-extrabold text-[#3F2A1D] text-[15px]">{t('assistant', 'Assistant')}</span>
                             <div className={`w-2 h-2 rounded-full ${statusConfig.dot}`} title={statusConfig.text} />
                           </div>
-                          <div className="text-[11px] text-[#A08B7A] font-semibold tracking-tight">
-                            {statusConfig.mode === 'ollama' ? t('modeLuring', 'Offline Mode (Ollama)') : t('modeCloud', 'Cloud Mode')}
+                          <div title={statusConfig.detail || statusConfig.text} className="max-w-[150px] truncate text-[11px] text-[#A08B7A] font-semibold tracking-tight">
+                            {statusConfig.detail || statusConfig.text}
                           </div>
                         </div>
                     </div>
@@ -64,6 +82,7 @@ export const AiChatPanel: React.FC<AiChatPanelProps> = ({ mode, canvasRef, onClo
                           useStore.getState().clearMessages();
                           toast.info(t('clearChatToast', 'Conversation history cleared.'));
                         }}
+                        aria-label={t('clearChatHistory', 'Clear conversation')}
                         title={t('clearChatHistory', 'Clear conversation')}
                         className="text-[#A08B7A] hover:text-rose-600 bg-[#F6F0E8] hover:bg-rose-50 p-2.5 rounded-2xl transition-colors active:scale-95 cursor-pointer"
                       >
@@ -102,6 +121,15 @@ export const AiChatPanel: React.FC<AiChatPanelProps> = ({ mode, canvasRef, onClo
                            <Sparkles size={28} className="text-[#6B4423]" />
                         </div>
                         <p className="text-[15px] font-medium text-[#A08B7A]">{t('emptyChatPrompt', 'Ask anything or upload a file/document/image to start a conversation with AI.')}</p>
+                      </div>
+                    )}
+                    {!messages.some(message => message.role === 'user') && (
+                      <div className="grid grid-cols-2 gap-2" aria-label="Starter prompts">
+                        {starters.map(([label, prompt]) => <button key={label} type="button"
+                          onClick={() => setChatInputText(prompt)}
+                          className="rounded-2xl border border-[#E7DDD2] bg-[#FFF6EE] px-3 py-2 text-left text-xs font-bold text-[#6B4423] hover:bg-[#F4B183]/25 focus-visible:ring-2 focus-visible:ring-[#6B4423]">
+                          {label}
+                        </button>)}
                       </div>
                     )}
                     {messages.map((msg, i) => (
@@ -204,6 +232,7 @@ export const AiChatPanel: React.FC<AiChatPanelProps> = ({ mode, canvasRef, onClo
                               : t('pleaseAnalyzeDocument', 'Please analyze this document and summarize key points on the whiteboard.'))
                           : (lastUploadedImage ? t('pleaseAnalyzeImage', 'Please analyze this image.') : '');
                         const text = chatInputText.trim() || defaultText;
+                        followMessages.current = true;
                         setChatInputText('');
                         useStore.getState().addMessage({ role: 'user', text });
                         await processUserPrompt(text, canvasRef);
@@ -234,6 +263,7 @@ export const AiChatPanel: React.FC<AiChatPanelProps> = ({ mode, canvasRef, onClo
                           </button>
                         </div>
                         <textarea
+                          aria-label="Message AI assistant"
                           value={chatInputText}
                           onChange={(e) => {
                             setChatInputText(e.target.value);
@@ -241,7 +271,7 @@ export const AiChatPanel: React.FC<AiChatPanelProps> = ({ mode, canvasRef, onClo
                             e.target.style.height = `${Math.min(e.target.scrollHeight, 160)}px`;
                           }}
                           onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
+                            if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
                               e.preventDefault();
                               e.currentTarget.form?.requestSubmit();
                             }
@@ -260,6 +290,7 @@ export const AiChatPanel: React.FC<AiChatPanelProps> = ({ mode, canvasRef, onClo
                          <div className="pb-0.5">
                            <button
                              type="submit"
+                             aria-label="Send message"
                              disabled={isThinking || (!chatInputText.trim() && !attachedDocument && !lastUploadedImage)}
                              className={`p-3 rounded-[1.2rem] transition-all duration-200 mr-0.5 ${isThinking ? 'bg-[#F6F0E8] text-[#A08B7A] scale-95 pointer-events-none opacity-50' : (chatInputText.trim() || attachedDocument || lastUploadedImage ? 'bg-[#6B4423] text-[#FFF6EE] shadow-lg shadow-[#6B4423]/25 active:scale-90 scale-100' : 'bg-[#F6F0E8] text-[#A08B7A] scale-95 pointer-events-none')}`}
                            >

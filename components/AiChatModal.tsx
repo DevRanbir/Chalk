@@ -40,7 +40,7 @@ export const AiChatModal: React.FC<{ isOpen: boolean; onClose: () => void; child
       <motion.div ref={dialogRef} role="dialog" aria-modal="true" aria-label="AI chat" tabIndex={-1}
         initial={reducedMotion ? false : { opacity: 0, scale: 0.96, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: reducedMotion ? 0 : 0.2 }}
-        className="flex w-full max-w-4xl h-[88dvh] max-h-[820px] flex-col overflow-hidden rounded-[28px] border border-[#E7DDD2] bg-[#FFF6EE] shadow-2xl outline-none">
+        className="flex w-full max-w-4xl h-[88dvh] max-h-[820px] flex-col overflow-hidden rounded-[28px] border border-[#E7DDD2] bg-[#FFF6EE] shadow-2xl outline-none focus-visible:ring-2 focus-visible:ring-[#6B4423]">
         {children}
       </motion.div>
     </div>, document.body);
