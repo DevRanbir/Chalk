@@ -208,7 +208,6 @@ export const CanvasManager: React.FC<CanvasManagerProps> = ({ onCanvasReady }) =
 
     // --- NAVIGATION LOGIC (PAN & ZOOM) ---
     let isPanning = false;
-    let isSpaceDown = false;
     let lastPosX: number;
     let lastPosY: number;
     
@@ -242,11 +241,14 @@ export const CanvasManager: React.FC<CanvasManagerProps> = ({ onCanvasReady }) =
       }
 
       if (e.code === 'Space') {
+        if (e.ctrlKey || e.metaKey || e.altKey
+          || (document.activeElement as HTMLElement)?.closest('button, a, [role="button"]')) return;
         e.preventDefault();
-        isSpaceDown = true;
-        canvas.defaultCursor = 'grab';
-        canvas.selection = false;
-        canvas.requestRenderAll();
+        if (e.repeat) return;
+        const state = useStore.getState();
+        if (!state.isAiDrawerOpen) state.toggleAiDrawer();
+        window.dispatchEvent(new Event('toggle-mic'));
+        return;
       }
 
       // Zoom Keyboard Shortcuts
@@ -282,17 +284,7 @@ export const CanvasManager: React.FC<CanvasManagerProps> = ({ onCanvasReady }) =
       }
     };
 
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.code === 'Space') {
-        isSpaceDown = false;
-        canvas.defaultCursor = useStore.getState().activeTool === 'HAND' ? 'grab' : 'default';
-        if (useStore.getState().activeTool === 'SELECT') canvas.selection = true;
-        canvas.requestRenderAll();
-      }
-    };
-
     window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
 
     canvas.on('mouse:down', function(opt: any) {
       if (isViewerUrl) return;
@@ -301,8 +293,8 @@ export const CanvasManager: React.FC<CanvasManagerProps> = ({ onCanvasReady }) =
       const isRightClick = evt.button === 2;
       const isMiddleClick = evt.button === 1;
       
-      // Pan triggers: Space+Drag, Right-click, Middle-click, or Touch-on-empty
-      if (useStore.getState().activeTool === 'HAND' || isSpaceDown || isRightClick || isMiddleClick || (isTouch && !opt.target)) {
+      // Pan triggers: Hand tool, Right-click, Middle-click, or Touch-on-empty
+      if (useStore.getState().activeTool === 'HAND' || isRightClick || isMiddleClick || (isTouch && !opt.target)) {
         isPanning = true;
         canvas.__isPanning = true;
         canvas.selection = false;
@@ -335,8 +327,8 @@ export const CanvasManager: React.FC<CanvasManagerProps> = ({ onCanvasReady }) =
         canvas.setViewportTransform(canvas.viewportTransform);
         isPanning = false;
         canvas.__isPanning = false;
-        canvas.defaultCursor = isSpaceDown || useStore.getState().activeTool === 'HAND' ? 'grab' : 'default';
-        if (!isSpaceDown && useStore.getState().activeTool === 'SELECT') canvas.selection = true;
+        canvas.defaultCursor = useStore.getState().activeTool === 'HAND' ? 'grab' : 'default';
+        if (useStore.getState().activeTool === 'SELECT') canvas.selection = true;
         canvas.requestRenderAll();
       }
     });
@@ -757,7 +749,6 @@ export const CanvasManager: React.FC<CanvasManagerProps> = ({ onCanvasReady }) =
       window.removeEventListener('resize', resizeCanvas);
       window.removeEventListener('orientationchange', resizeCanvas);
       window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
       window.removeEventListener('removeCanvasObject', handleRemoteRemove);
       window.removeEventListener('clearCanvas', handleClearCanvas);
       window.removeEventListener('moveCanvasPlaceholder', handleMovePlaceholder);
