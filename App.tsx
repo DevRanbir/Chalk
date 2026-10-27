@@ -340,7 +340,7 @@ const App: React.FC = () => {
               <motion.button
                 whileHover={{ scale: 1.04 }}
                 whileTap={{ scale: 0.96 }}
-                onClick={toggleAiDrawer}
+                onClick={() => { setAiModalOpen(false); toggleAiDrawer(); }}
                 className={`flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-full border cursor-pointer ${
                   isAiDrawerOpen
                     ? 'bg-[#6B4423] text-[#FBF6F0] border-[#6B4423]'
@@ -351,7 +351,7 @@ const App: React.FC = () => {
               </motion.button>
 
               <button type="button" aria-label="Open AI chat popup" title="Open AI chat popup"
-                onClick={() => setAiModalOpen(true)} className="rounded-full border border-[#E7DDD2] bg-[#FBF6F0] p-2.5 text-[#6B4423]">
+                onClick={() => { if (isAiDrawerOpen) toggleAiDrawer(); setAiModalOpen(true); }} className="rounded-full border border-[#E7DDD2] bg-[#FBF6F0] p-2.5 text-[#6B4423]">
                 <Maximize2 size={18} />
               </button>
               <SaveMenu onExportClick={() => setIsExportOpen(true)} />
@@ -422,6 +422,7 @@ const App: React.FC = () => {
             <ExportDialog isOpen={isExportOpen} onClose={() => setIsExportOpen(false)} canvasRef={canvasRef} />
             <AiChatModal isOpen={isAiModalOpen} onClose={() => setAiModalOpen(false)}>
               <AiChatPanel mode="modal" canvasRef={canvasRef} onClose={() => setAiModalOpen(false)}
+                onToggleMode={() => { setAiModalOpen(false); if (!isAiDrawerOpen) toggleAiDrawer(); }}
                 onOpenSettings={() => { setAiModalOpen(false); setIsSettingsOpen(true); }} statusConfig={statusConfig} />
             </AiChatModal>
             <QuickGuideModal 
@@ -667,6 +668,7 @@ const App: React.FC = () => {
                   className={`absolute lg:relative right-2 top-0 bottom-2 lg:right-0 lg:bottom-0 max-h-full bg-[#FBF6F0] backdrop-blur-xl rounded-[28px] flex flex-col z-40 lg:z-10 shrink-0 border border-[#E7DDD2] shadow-[0_8px_30px_rgb(63,42,29,0.06)] overflow-hidden`}
                 >
                   <AiChatPanel mode="sidebar" canvasRef={canvasRef} onClose={toggleAiDrawer}
+                    onToggleMode={() => { toggleAiDrawer(); setAiModalOpen(true); }}
                     onOpenSettings={() => setIsSettingsOpen(true)} statusConfig={statusConfig} />
                 </motion.aside>
               )}

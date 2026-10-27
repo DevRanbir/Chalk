@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
-import { Sparkles, Trash2, X, Network, FileText, HelpCircle, Plus, Mic, Send } from 'lucide-react';
+import { Sparkles, Trash2, X, Network, FileText, HelpCircle, Plus, Mic, Send, Maximize2, PanelRightClose } from 'lucide-react';
 import { useStore } from '../store';
 import { useGeminiBrain } from '../hooks/useGeminiBrain';
 import { useTranslation } from '../utils/translations';
@@ -14,11 +14,12 @@ export interface AiChatPanelProps {
   mode: 'sidebar' | 'modal';
   canvasRef: React.MutableRefObject<any>;
   onClose: () => void;
+  onToggleMode?: () => void;
   onOpenSettings: () => void;
   statusConfig: { dot: string; text: string; mode: string };
 }
 
-export const AiChatPanel: React.FC<AiChatPanelProps> = ({ mode, canvasRef, onClose, onOpenSettings, statusConfig }) => {
+export const AiChatPanel: React.FC<AiChatPanelProps> = ({ mode, canvasRef, onClose, onToggleMode, onOpenSettings, statusConfig }) => {
   const { t } = useTranslation();
   const { messages, isThinking, abortTask, chatInputText, setChatInputText,
     attachedDocument, lastUploadedImage, isVoiceListening, interimInputText } = useStore();
@@ -51,6 +52,12 @@ export const AiChatPanel: React.FC<AiChatPanelProps> = ({ mode, canvasRef, onClo
                         </div>
                     </div>
                     <div className="flex items-center gap-1">
+                      {onToggleMode && <button type="button" onClick={onToggleMode}
+                        aria-label={mode === 'sidebar' ? 'Pop out to modal' : 'Dock to side'}
+                        title={mode === 'sidebar' ? 'Pop out to modal' : 'Dock to side'}
+                        className="rounded-2xl bg-[#F6F0E8] p-2.5 text-[#6B4423] hover:bg-[#F4B183]/30">
+                        {mode === 'sidebar' ? <Maximize2 size={16} /> : <PanelRightClose size={16} />}
+                      </button>}
                       <button
                         type="button"
                         onClick={() => {
