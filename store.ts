@@ -21,6 +21,9 @@ interface AppStore extends AgentState {
   // App UI State
   isAiDrawerOpen: boolean;
   toggleAiDrawer: () => void;
+  isAiModalOpen: boolean;
+  toggleAiModal: () => void;
+  setAiModalOpen: (open: boolean) => void;
   
   isTimerOpen: boolean;
   toggleTimer: () => void;
@@ -652,7 +655,10 @@ export const useStore = create<AppStore>((set, get) => ({
   },
   
   isAiDrawerOpen: false,
-  toggleAiDrawer: () => set((state) => ({ isAiDrawerOpen: !state.isAiDrawerOpen })),
+  toggleAiDrawer: () => set((state) => ({ isAiDrawerOpen: !state.isAiDrawerOpen, isAiModalOpen: false })),
+  isAiModalOpen: false,
+  toggleAiModal: () => set((state) => ({ isAiModalOpen: !state.isAiModalOpen, isAiDrawerOpen: false })),
+  setAiModalOpen: (open) => set((state) => ({ isAiModalOpen: open, isAiDrawerOpen: open ? false : state.isAiDrawerOpen })),
   
   isTimerOpen: false,
   toggleTimer: () => set((state) => ({ isTimerOpen: !state.isTimerOpen })),

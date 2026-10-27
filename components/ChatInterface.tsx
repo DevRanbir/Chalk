@@ -90,7 +90,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ canvasRef }) => {
     isShapeFilled, setShapeFilled,
     fontFamily, setFontFamily, fontSize, setFontSize,
     pages, currentPageIndex, switchPage, addPage, removePage,
-    isAiDrawerOpen, isViewerUrl,
+    isAiDrawerOpen, isAiModalOpen, isViewerUrl,
     toggleTimer, toggleCalculator, toggleNotes, toggleQuiz,
     toggleUnitConverter, togglePeriodicTable, toggleAttendance, toggleTodoList, toggleBoardSettings,
     transcribeMode, selectedVertexModel, selectedGeminiModel, selectedOllamaModel, geminiApiKey, voiceConfig,
@@ -142,7 +142,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ canvasRef }) => {
             } else {
               setInput(data.text.trim());
               useStore.getState().setChatInputText(data.text.trim());
-              if (!isAiDrawerOpen) useStore.getState().toggleAiDrawer();
+              if (!useStore.getState().isAiDrawerOpen && !useStore.getState().isAiModalOpen) useStore.getState().toggleAiDrawer();
               toast.info('The transcript was placed in the input field.');
             }
           } else {
@@ -449,7 +449,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ canvasRef }) => {
           } else {
             setInput(finalLocalTranscript);
             useStore.getState().setChatInputText(finalLocalTranscript);
-            if (!isAiDrawerOpen) useStore.getState().toggleAiDrawer();
+            if (!useStore.getState().isAiDrawerOpen && !useStore.getState().isAiModalOpen) useStore.getState().toggleAiDrawer();
             toast.info('The voice result was placed in the input field.');
           }
         }
@@ -469,7 +469,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ canvasRef }) => {
       if (isWebSpeech && !speechSupported) {
         const fallbackMessage = t('voiceUnsupported', 'This browser does not support local speech recognition (Web Speech API). Please use the text field.');
         setVoiceNotice(fallbackMessage);
-        if (!isAiDrawerOpen) useStore.getState().toggleAiDrawer();
+        if (!useStore.getState().isAiDrawerOpen && !useStore.getState().isAiModalOpen) useStore.getState().toggleAiDrawer();
         return;
       }
 
@@ -600,7 +600,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ canvasRef }) => {
                   } else {
                     setInput(data.text.trim());
                     useStore.getState().setChatInputText(data.text.trim());
-                    if (!isAiDrawerOpen) useStore.getState().toggleAiDrawer();
+                    if (!useStore.getState().isAiDrawerOpen && !useStore.getState().isAiModalOpen) useStore.getState().toggleAiDrawer();
                     toast.info('The transcript was placed in the input field.');
                   }
                 }
@@ -636,7 +636,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ canvasRef }) => {
       } catch (err) {
         setMicPermission('denied');
         setVoiceNotice("Please allow microphone access, or use text input.");
-        if (!isAiDrawerOpen) useStore.getState().toggleAiDrawer();
+        if (!useStore.getState().isAiDrawerOpen && !useStore.getState().isAiModalOpen) useStore.getState().toggleAiDrawer();
       }
     }
   };
@@ -870,7 +870,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ canvasRef }) => {
 
           {/* Voice island bar — stays compact, never stretches sideways */}
           <AnimatePresence>
-            {!isAiDrawerOpen && (
+            {!isAiDrawerOpen && !isAiModalOpen && (
               <motion.div
                  initial={{ opacity: 0, y: 20, scale: 0.95 }}
                  animate={{ opacity: 1, y: 0, scale: 1 }}

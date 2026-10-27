@@ -159,7 +159,7 @@ export function matchAndExecuteHandsFreeCommand(rawText: string): HandsFreeComma
     /^(buat|buatkan|gambar|gambarkan|jelaskan|terangkan|ubah|edit|perbarui|tambahkan|rangkum|ringkas|apa|mengapa|kenapa|bagaimana|siapa|create|draw|explain|modify|update|what|how|why)\b/i.test(clean)
   ) {
     store.setChatInputText(rawText);
-    if (!store.isAiDrawerOpen) store.toggleAiDrawer();
+    if (!store.isAiDrawerOpen && !store.isAiModalOpen) store.toggleAiDrawer();
     if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
       window.dispatchEvent(new CustomEvent('execute-voice-prompt', { detail: { prompt: clean } }));
     }

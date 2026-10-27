@@ -1,4 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
+import { AiChatPanel } from './components/AiChatPanel';
+import { AiChatModal } from './components/AiChatModal';
 import { CanvasManager } from './components/CanvasManager';
 import { ChatInterface } from './components/ChatInterface';
 import { useGeminiBrain } from './hooks/useGeminiBrain';
@@ -21,7 +23,7 @@ import {
   Image as ImageIcon, File, History, Settings, Mic, Monitor, Share, Download, Sparkles,
   CheckCircle2, ChevronDown, ChevronRight, Keyboard, Menu,
   Clock, CheckSquare, PencilRuler, ShieldCheck, HelpCircle, User,
-  MoreHorizontal, Plus, X, Check, Pencil, Send, Trash2, Archive, Database, Network
+  MoreHorizontal, Plus, X, Check, Pencil, Send, Trash2, Archive, Database, Network, Maximize2
 } from 'lucide-react';
 import { SidebarItem } from './components/SidebarItem';
 import { ChatMessageItem } from './components/ChatMessageItem';
@@ -39,7 +41,6 @@ import { QuestPanel } from './components/QuestPanel';
 const App: React.FC = () => {
   const { t } = useTranslation();
   const canvasRef = useRef<any>(null);
-  const chatEndRef = useRef<HTMLDivElement>(null);
   const [, setReady] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isQuestOpen, setIsQuestOpen] = useState(false);
@@ -59,7 +60,7 @@ const App: React.FC = () => {
   const { loadSessions } = useStore();
 
   const {
-    logs, inputMode, setInputMode, messages, isAiDrawerOpen, toggleAiDrawer,
+    logs, inputMode, setInputMode, messages, isAiDrawerOpen, toggleAiDrawer, isAiModalOpen, setAiModalOpen,
     chatInputText, setChatInputText, lastUploadedImage, setLastUploadedImage,
     attachedDocument, setAttachedDocument,
     userName, setUserName,
@@ -105,20 +106,6 @@ const App: React.FC = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-
-  useEffect(() => {
-    if (chatEndRef.current) {
-      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [messages, isThinking]);
-
-  useEffect(() => {
-    if (isAiDrawerOpen && chatEndRef.current) {
-      setTimeout(() => {
-        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
-    }
-  }, [isAiDrawerOpen]);
 
   const { processUserPrompt } = useGeminiBrain();
   const aiStatus = useAiStatus();
@@ -235,6 +222,16 @@ const App: React.FC = () => {
 
   const statusConfig = getStatusConfig();
 
+  const openAiChat = (mode: 'sidebar' | 'modal') => {
+    if (isHistoryOpen) toggleHistory();
+    setIsSettingsOpen(false);
+    setIsExportOpen(false);
+    setIsGuideOpen(false);
+    if (isMobileLayout) setIsSidebarOpen(false);
+    if (mode === 'modal') setAiModalOpen(true);
+    else if (!isAiDrawerOpen) toggleAiDrawer();
+  };
+
   const handleCanvasReady = (ref: any) => {
     canvasRef.current = ref.current;
     setReady(true);
@@ -349,19 +346,18 @@ const App: React.FC = () => {
             </div>
 
             <div className="flex items-center justify-end gap-2 shrink-0 z-10">
-              <motion.button
-                whileHover={{ scale: 1.04 }}
-                whileTap={{ scale: 0.96 }}
-                onClick={toggleAiDrawer}
-                className={`flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-full border cursor-pointer ${
-                  isAiDrawerOpen
-                    ? 'bg-[#6B4423] text-[#FBF6F0] border-[#6B4423]'
-                    : 'text-[#6B4423] bg-[#FBF6F0] hover:bg-white border-[#E7DDD2]'
-                }`}
-              >
-                <Sparkles size={16} /> <span className="hidden sm:inline">Assistant</span>
-              </motion.button>
-
+              <div className="flex items-center gap-1 rounded-full border border-[#E7DDD2] bg-[#FBF6F0] p-0.5">
+                <button type="button" aria-label="AI Assistant sidebar" aria-expanded={isAiDrawerOpen}
+                  onClick={toggleAiDrawer}
+                  className={`flex items-center gap-2 rounded-full px-3.5 py-2 text-sm font-bold transition-colors ${isAiDrawerOpen ? 'bg-[#6B4423] text-[#FBF6F0]' : 'text-[#6B4423] hover:bg-white'}`}>
+                  <Sparkles size={16} /><span className="hidden sm:inline">Assistant</span>
+                </button>
+                <button type="button" aria-label="Open AI chat popup" title="Open AI chat popup" aria-haspopup="dialog"
+                  onClick={() => setAiModalOpen(true)}
+                  className={`rounded-full p-2.5 transition-colors ${isAiModalOpen ? 'bg-[#6B4423] text-[#FBF6F0]' : 'text-[#6B4423] hover:bg-white'}`}>
+                  <Maximize2 size={16} />
+                </button>
+              </div>
               <SaveMenu onExportClick={() => setIsExportOpen(true)} />
 
               {!isViewer && (
@@ -428,12 +424,17 @@ const App: React.FC = () => {
               onCloseQuest={closeQuest}
             />
             <ExportDialog isOpen={isExportOpen} onClose={() => setIsExportOpen(false)} canvasRef={canvasRef} />
+            <AiChatModal isOpen={isAiModalOpen} onClose={() => setAiModalOpen(false)}>
+              <AiChatPanel mode="modal" canvasRef={canvasRef} onClose={() => setAiModalOpen(false)}
+                onToggleMode={() => { setAiModalOpen(false); if (!isAiDrawerOpen && !isAiModalOpen) toggleAiDrawer(); }}
+                onOpenSettings={() => { setAiModalOpen(false); setIsSettingsOpen(true); }} statusConfig={statusConfig} />
+            </AiChatModal>
             <QuickGuideModal 
               isOpen={isGuideOpen} 
               onClose={() => setIsGuideOpen(false)} 
               onSamplePromptClick={(prompt) => {
                 setChatInputText(prompt);
-                if (!isAiDrawerOpen) toggleAiDrawer();
+                if (!isAiDrawerOpen && !isAiModalOpen) toggleAiDrawer();
               }}
             />
             <ToolOverlay />
@@ -468,13 +469,19 @@ const App: React.FC = () => {
                       <SidebarItem
                         icon={Square}
                         label="Whiteboard"
-                        active={!isHistoryOpen && !isSettingsOpen && !isExportOpen}
+                        active={!isHistoryOpen && !isSettingsOpen && !isExportOpen && !isAiDrawerOpen && !isAiModalOpen}
                         onClick={() => {
                           if (isHistoryOpen) toggleHistory();
                           setIsSettingsOpen(false);
                           setIsExportOpen(false);
+                          setAiModalOpen(false);
+                          if (isAiDrawerOpen) toggleAiDrawer();
                         }}
                       />
+                      <SidebarItem icon={Sparkles} label="AI Assistant" active={isAiDrawerOpen}
+                        onClick={() => openAiChat('sidebar')} />
+                      <SidebarItem icon={Maximize2} label="AI Chat (Popup)" active={isAiModalOpen}
+                        onClick={() => openAiChat('modal')} />
 
                       {/* 2. History */}
                       <SidebarItem
@@ -664,247 +671,15 @@ const App: React.FC = () => {
             <AnimatePresence>
               {isAiDrawerOpen && (
                 <motion.aside
-                  initial={{ x: '100%', opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  exit={{ x: '100%', opacity: 0 }}
-                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                  className={`absolute right-4 lg:right-8 top-4 lg:top-8 bottom-4 lg:bottom-8 w-[calc(100%-2rem)] sm:w-95 bg-[#FFF6EE]/95 backdrop-blur-2xl rounded-4xl border border-[#E7DDD2] flex flex-col z-50 shadow-[0_20px_60px_rgba(63,42,29,0.12)] overflow-hidden`}
+                  initial={{ width: 0, opacity: 0, x: 20 }}
+                  animate={{ width: isMobileLayout ? 'calc(100% - 1rem)' : 380, opacity: 1, x: 0 }}
+                  exit={{ width: 0, opacity: 0, x: 20 }}
+                  transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                  className={`absolute lg:relative right-2 top-0 bottom-2 lg:right-0 lg:bottom-0 max-h-full bg-[#FBF6F0] backdrop-blur-xl rounded-[28px] flex flex-col z-40 lg:z-10 shrink-0 border border-[#E7DDD2] shadow-[0_8px_30px_rgb(63,42,29,0.06)] overflow-hidden`}
                 >
-                  {/* Header */}
-                  <div className="h-16 lg:h-18 border-b border-[#E7DDD2] flex items-center justify-between px-5 font-sans bg-[#FBF6F0]/80">
-                    <div className="flex items-center gap-3">
-                        <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#F4B183] shrink-0 shadow-xs">
-                          <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none">
-                            <path
-                              d="M7 4.5v15l4.2-4.1 2.9 5.1 2.4-1.3-2.9-5H19L7 4.5Z"
-                              fill="#3F2A1D"
-                              stroke="#3F2A1D"
-                              strokeWidth="1.2"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        </span>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-extrabold text-[#3F2A1D] text-[15px]">{t('assistant', 'Assistant')}</span>
-                            <div className={`w-2 h-2 rounded-full ${statusConfig.dot}`} title={statusConfig.text} />
-                          </div>
-                          <div className="text-[11px] text-[#A08B7A] font-semibold tracking-tight">
-                            {statusConfig.mode === 'ollama' ? t('modeLuring', 'Offline Mode (Ollama)') : t('modeCloud', 'Cloud Mode')}
-                          </div>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          useStore.getState().clearMessages();
-                          toast.info(t('clearChatToast', 'Conversation history cleared.'));
-                        }}
-                        title={t('clearChatHistory', 'Clear conversation')}
-                        className="text-[#A08B7A] hover:text-rose-600 bg-[#F6F0E8] hover:bg-rose-50 p-2.5 rounded-2xl transition-colors active:scale-95 cursor-pointer"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                      <button onClick={toggleAiDrawer} className="text-[#A08B7A] hover:text-[#3F2A1D] bg-[#F6F0E8] hover:bg-[#F4B183]/30 p-2.5 rounded-2xl transition-colors active:scale-95 cursor-pointer">
-                        <X size={18} strokeWidth={2.5} />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Chat Content */}
-                  <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4 custom-scrollbar scroll-smooth">
-                    {/* Reminder Pill for Demo Cloud / Chalk Local Models & Personal API Key */}
-                    <div className="p-3 rounded-2xl bg-[#F6F0E8] border border-[#E7DDD2] text-[11.5px] leading-relaxed text-[#3F2A1D] flex flex-col gap-1.5">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-black text-[#3F2A1D] flex items-center gap-1.5">
-                          <span className="px-2 py-0.5 rounded-full bg-[#FFE08A] text-[#3F2A1D] text-[9.5px] font-black uppercase">AI</span>
-                          Local model or your own API key
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setIsSettingsOpen(true)}
-                          className="text-[10.5px] font-extrabold text-[#6B4423] underline cursor-pointer"
-                        >
-                          {t('settings', 'Settings')} →
-                        </button>
-                      </div>
-                      <p className="text-[#6B4423] font-medium">
-                        Use a local model in Ollama, or add your own Google AI Studio key in Settings.
-                      </p>
-                    </div>
-                    {messages.length === 0 && (
-                      <div className="h-full flex flex-col items-center justify-center text-center opacity-50 px-4">
-                        <div className="w-16 h-16 rounded-3xl bg-[#F4B183]/40 flex items-center justify-center mb-4">
-                           <Sparkles size={28} className="text-[#6B4423]" />
-                        </div>
-                        <p className="text-[15px] font-medium text-[#A08B7A]">{t('emptyChatPrompt', 'Ask anything or upload a file/document/image to start a conversation with AI.')}</p>
-                      </div>
-                    )}
-                    {messages.map((msg, i) => (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10, scale: 0.98 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        key={i}
-                        className="w-full"
-                      >
-                        <ChatMessageItem
-                          message={msg}
-                          isLatest={i === messages.length - 1}
-                          isThinking={isThinking}
-                        />
-                      </motion.div>
-                    ))}
-                    {isThinking && (
-                      <div className="flex flex-col items-start w-full my-1">
-                        <ProcessingStatusHud onCancel={abortTask} />
-                      </div>
-                    )}
-                    <div ref={chatEndRef} />
-                  </div>
-
-                  {/* Input Bar */}
-                  <div className="p-4 lg:p-5 border-t border-[#E7DDD2] bg-[#FBF6F0]/90 backdrop-blur-xl shadow-[0_-10px_40px_rgba(63,42,29,0.04)] z-10 font-sans relative shrink-0">
-                    <AttachedDocumentBadge className="mb-2" />
-
-                    {/* Live Voice Mode Synchronization Banner inside Studio Drawer */}
-                    {isVoiceListening && (
-                      <div className="flex items-center justify-between gap-2 px-3.5 py-2 mb-2.5 rounded-full bg-[#6B4423] text-[#FFF6EE] text-xs font-bold shadow-xs">
-                        <div className="flex items-center gap-2 truncate">
-                          <span className="w-2 h-2 rounded-full bg-[#ffcc00] animate-ping shrink-0" />
-                          <span className="truncate">
-                            {interimInputText
-                              ? `${t('listeningTo', 'Listening')}: "${interimInputText}"`
-                              : t('voiceListeningActive', 'Voice mode is on. Please speak...')}
-                          </span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => window.dispatchEvent(new Event('toggle-mic'))}
-                          className="px-2.5 py-0.5 rounded-full bg-[#FFE08A] text-[#3F2A1D] text-[10px] font-black shrink-0 cursor-pointer"
-                        >
-                          {t('doneBtn', 'Done')}
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Quick Document Action Pills (Only when document is attached) */}
-                    {attachedDocument && !isThinking && (
-                      <div className="flex flex-wrap gap-1.5 mb-2.5">
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            const prompt = `Please create a structured and comprehensive mind map from the document "${attachedDocument.name}" on the whiteboard.`;
-                            useStore.getState().addMessage({ role: 'user', text: prompt });
-                            await processUserPrompt(prompt, canvasRef);
-                          }}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#F4B183]/35 hover:bg-[#F4B183]/55 text-[#3F2A1D] border border-[#E7DDD2] text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-2xs"
-                        >
-                          <Network size={12} />
-                          <span>{t('createMindmapBtn', '🌳 Create Mind Map')}</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            const prompt = `Please create a comprehensive academic summary of the document "${attachedDocument.name}" and display it as a note on the whiteboard.`;
-                            useStore.getState().addMessage({ role: 'user', text: prompt });
-                            await processUserPrompt(prompt, canvasRef);
-                          }}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FFE08A]/50 hover:bg-[#FFE08A]/80 text-[#3F2A1D] border border-[#E7DDD2] text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-2xs"
-                        >
-                          <FileText size={12} />
-                          <span>{t('summarizeDocBtn', '📝 Summarize Material')}</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            const prompt = `Please create a 5-question student comprehension quiz based on the document "${attachedDocument.name}".`;
-                            useStore.getState().addMessage({ role: 'user', text: prompt });
-                            await processUserPrompt(prompt, canvasRef);
-                          }}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200/80 text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-2xs"
-                        >
-                          <HelpCircle size={12} />
-                          <span>{t('createQuizBtn', '❓ Create Interactive Quiz')}</span>
-                        </button>
-                      </div>
-                    )}
-
-                    <form
-                      onSubmit={async (e) => {
-                        e.preventDefault();
-                        if (isThinking) return;
-                        if (!chatInputText.trim() && !attachedDocument && !lastUploadedImage) return;
-                        const defaultText = attachedDocument
-                          ? (attachedDocument.category === 'image'
-                              ? t('pleaseAnalyzeImage', 'Please analyze this image.')
-                              : t('pleaseAnalyzeDocument', 'Please analyze this document and summarize key points on the whiteboard.'))
-                          : (lastUploadedImage ? t('pleaseAnalyzeImage', 'Please analyze this image.') : '');
-                        const text = chatInputText.trim() || defaultText;
-                        setChatInputText('');
-                        useStore.getState().addMessage({ role: 'user', text });
-                        await processUserPrompt(text, canvasRef);
-                      }}
-                      className="flex items-end gap-2 w-full border-[1.5px] border-[#E7DDD2] rounded-3xl p-1.5 bg-[#FFF6EE] focus-within:bg-[#FFF6EE] focus-within:ring-4 focus-within:ring-[#F4B183]/35 focus-within:border-[#F4B183] transition-all shadow-inner"
-                    >
-                        <div className="flex items-center pb-0.5">
-                          <FileUploadButton
-                            className="text-[#A08B7A] hover:text-[#3F2A1D] transition-colors p-2.5 rounded-[1.1rem] hover:bg-[#F4B183]/30 ml-0.5 active:scale-95"
-                            icon={<Plus size={20} />}
-                            title={t('uploadFileOrImage', 'Upload file / document / image')}
-                            disabled={isThinking}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              window.dispatchEvent(new Event('toggle-mic'));
-                            }}
-                            disabled={isThinking}
-                            className={`transition-all p-2.5 rounded-full active:scale-95 cursor-pointer ${
-                              useStore.getState().isVoiceListening
-                                ? 'bg-red-500 text-white animate-pulse shadow-sm'
-                                : 'text-[#A08B7A] hover:text-[#3F2A1D] hover:bg-[#F4B183]/30'
-                            } ${isThinking ? 'opacity-40 pointer-events-none' : ''}`}
-                            title={useStore.getState().isVoiceListening ? 'Stop & Send Voice' : t('switchToVoice', 'Switch to voice mode')}
-                          >
-                            <Mic size={20} />
-                          </button>
-                        </div>
-                        <textarea
-                          value={chatInputText}
-                          onChange={(e) => {
-                            setChatInputText(e.target.value);
-                            e.target.style.height = 'auto';
-                            e.target.style.height = `${Math.min(e.target.scrollHeight, 160)}px`;
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                              e.preventDefault();
-                              e.currentTarget.form?.requestSubmit();
-                            }
-                          }}
-                          rows={1}
-                          disabled={isThinking}
-                          placeholder={isThinking 
-                            ? t('chalkIsThinking', 'Chalk is thinking...') 
-                            : (attachedDocument 
-                                ? (attachedDocument.category === 'pdf' 
-                                    ? 'Ask about this PDF...' 
-                                    : 'Ask about this document...') 
-                                : t('askSomething', 'Ask something or enter instructions...'))}
-                          className="flex-1 w-full bg-transparent border-none outline-none text-[14.5px] font-semibold text-[#3F2A1D] placeholder-[#A08B7A] px-2 py-2 resize-none max-h-40 min-h-[38px] leading-relaxed disabled:opacity-50 disabled:cursor-not-allowed overflow-y-auto"
-                        />
-                         <div className="pb-0.5">
-                           <button
-                             type="submit"
-                             disabled={isThinking || (!chatInputText.trim() && !attachedDocument && !lastUploadedImage)}
-                             className={`p-3 rounded-[1.2rem] transition-all duration-200 mr-0.5 ${isThinking ? 'bg-[#F6F0E8] text-[#A08B7A] scale-95 pointer-events-none opacity-50' : (chatInputText.trim() || attachedDocument || lastUploadedImage ? 'bg-[#6B4423] text-[#FFF6EE] shadow-lg shadow-[#6B4423]/25 active:scale-90 scale-100' : 'bg-[#F6F0E8] text-[#A08B7A] scale-95 pointer-events-none')}`}
-                           >
-                             <Send size={18} />
-                           </button>
-                         </div>
-                    </form>
-                  </div>
+                  <AiChatPanel mode="sidebar" canvasRef={canvasRef} onClose={toggleAiDrawer}
+                    onToggleMode={() => { toggleAiDrawer(); setAiModalOpen(true); }}
+                    onOpenSettings={() => setIsSettingsOpen(true)} statusConfig={statusConfig} />
                 </motion.aside>
               )}
             </AnimatePresence>
